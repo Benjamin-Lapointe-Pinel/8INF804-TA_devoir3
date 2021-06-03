@@ -97,17 +97,7 @@ void filter_inpaint(const bitmap<RGB> &input, const bitmap<RGB> &mask, bitmap<RG
           break;
         case filter_type::BONUS:
           break;
-        case filter_type::none:
-        default:
-          break;
         }
-
-        /* RGB i = input.pixel(x, y) * 5; */
-        /* i = i - input.pixel(x - 1, y); */
-        /* i = i - input.pixel(x + 1, y); */
-        /* i = i - input.pixel(x, y - 1); */
-        /* i = i - input.pixel(x, y + 1); */
-        /* output.pixel(x, y) = i; */
       }
     }
   }
