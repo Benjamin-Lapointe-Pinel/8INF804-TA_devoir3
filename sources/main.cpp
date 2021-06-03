@@ -26,19 +26,57 @@ bool is_mask(const bitmap<RGB> &mask, size_t x, size_t y)
 RGB box_blur(const bitmap<RGB> &input, const bitmap<RGB> &mask, size_t x, size_t y)
 {
   RGBD o(0, 0, 0);
-	double divider = 0;
+  double divider = 0;
   for (int i = -1; i < 3; i++)
   {
     for (int j = -1; j < 3; j++)
     {
       if (!(i == 0 && j == 0) && !is_mask(mask, x + i, y + j))
       {
-				o = o + input.pixel(x + i, y + j);
-				divider++;
+        o = o + input.pixel(x + i, y + j);
+        divider++;
       }
     }
   }
   return o / divider;
+}
+
+RGB sharpen(const bitmap<RGB> &input, const bitmap<RGB> &mask, size_t x, size_t y)
+{
+  RGBD o(0, 0, 0);
+  double multiplier = 0;
+
+  if (!is_mask(mask, x - 1, y))
+  {
+    o = o - input.pixel(x - 1, y);
+    multiplier++;
+  }
+  if (!is_mask(mask, x + 1, y))
+  {
+    o = o - input.pixel(x + 1, y);
+    multiplier++;
+  }
+  if (!is_mask(mask, x, y - 1))
+  {
+    o = o - input.pixel(x, y - 1);
+    multiplier++;
+  }
+  if (!is_mask(mask, x, y + 1))
+  {
+    o = o - input.pixel(x, y + 1);
+    multiplier++;
+  }
+
+  if (is_mask(mask, x, y))
+  {
+    o = o / -multiplier;
+  }
+  else
+  {
+		o = o + (input.pixel(x, y) * multiplier);
+  }
+
+  return o;
 }
 
 void filter_inpaint(const bitmap<RGB> &input, const bitmap<RGB> &mask, bitmap<RGB> &output, const options &opt)
@@ -55,6 +93,7 @@ void filter_inpaint(const bitmap<RGB> &input, const bitmap<RGB> &mask, bitmap<RG
           output.pixel(x, y) = box_blur(input, mask, x, y);
           break;
         case filter_type::Y:
+          output.pixel(x, y) = sharpen(input, mask, x, y);
           break;
         case filter_type::BONUS:
           break;
