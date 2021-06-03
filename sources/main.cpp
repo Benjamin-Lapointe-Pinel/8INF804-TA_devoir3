@@ -17,25 +17,58 @@ size_t first_of(const std::list<bool> &l)
   return c;
 }
 
-void inpaint(const bitmap<RGB> &input, const bitmap<RGB> &mask, bitmap<RGB> &output, const options &opt)
+bool is_mask(const bitmap<RGB> &mask, size_t x, size_t y)
+{
+  const RGB &m = mask.pixel(x, y);
+  return m.r == 255 && m.g == 255 && m.b == 255;
+}
+
+RGB box_blur(const bitmap<RGB> &input, const bitmap<RGB> &mask, size_t x, size_t y)
+{
+  RGBD o(0, 0, 0);
+	double divider = 0;
+  for (int i = -1; i < 3; i++)
+  {
+    for (int j = -1; j < 3; j++)
+    {
+      if (!(i == 0 && j == 0) && !is_mask(mask, x + i, y + j))
+      {
+				o = o + input.pixel(x + i, y + j);
+				divider++;
+      }
+    }
+  }
+  return o / divider;
+}
+
+void filter_inpaint(const bitmap<RGB> &input, const bitmap<RGB> &mask, bitmap<RGB> &output, const options &opt)
 {
   for (size_t x = 1; x < mask.width() - 1; x++)
   {
     for (size_t y = 1; y < mask.height() - 1; y++)
     {
-      const RGB &m = mask.pixel(x, y);
-      if (m.r == 255 && m.g == 255 && m.b == 255)
+      if (is_mask(mask, x, y))
       {
-        RGB i(0, 0, 0);
-        i = i + (input.pixel(x - 1, y - 1) * (1.0 / 5.0));
-        i = i + (input.pixel(x + 0, y - 1) * (1.0 / 5.0));
-        i = i + (input.pixel(x + 1, y - 1) * (1.0 / 5.0));
-        i = i + (input.pixel(x - 1, y + 0) * (1.0 / 5.0));
-        i = i + (input.pixel(x + 1, y + 0) * (1.0 / 5.0));
-        i = i + (input.pixel(x - 1, y + 1) * (1.0 / 5.0));
-        i = i + (input.pixel(x + 0, y + 1) * (1.0 / 5.0));
-        i = i + (input.pixel(x + 1, y + 1) * (1.0 / 5.0));
-        output.pixel(x, y) = i;
+        switch (opt.filter)
+        {
+        case filter_type::X:
+          output.pixel(x, y) = box_blur(input, mask, x, y);
+          break;
+        case filter_type::Y:
+          break;
+        case filter_type::BONUS:
+          break;
+        case filter_type::none:
+        default:
+          break;
+        }
+
+        /* RGB i = input.pixel(x, y) * 5; */
+        /* i = i - input.pixel(x - 1, y); */
+        /* i = i - input.pixel(x + 1, y); */
+        /* i = i - input.pixel(x, y - 1); */
+        /* i = i - input.pixel(x, y + 1); */
+        /* output.pixel(x, y) = i; */
       }
     }
   }
@@ -69,7 +102,7 @@ int main(int argc, char *argv[])
 
       if ((i.width() == m.width()) && (i.height() == m.height()))
       {
-        inpaint(i, m, o, opt);
+        filter_inpaint(i, m, o, opt);
         o.save(opt.output);
       }
       else
