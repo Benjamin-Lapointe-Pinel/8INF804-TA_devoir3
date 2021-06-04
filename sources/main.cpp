@@ -23,7 +23,7 @@ bool is_mask(const bitmap<RGB> &mask, size_t x, size_t y)
   return m.r == 255 && m.g == 255 && m.b == 255;
 }
 
-RGB box_blur(const bitmap<RGB> &input, const bitmap<RGB> &mask, size_t x, size_t y)
+bool box_blur(const bitmap<RGB> &input, const bitmap<RGB> &mask, bitmap<RGB> &output, size_t x, size_t y)
 {
   RGBD o(0, 0, 0);
   double divider = 0;
@@ -38,68 +38,96 @@ RGB box_blur(const bitmap<RGB> &input, const bitmap<RGB> &mask, size_t x, size_t
       }
     }
   }
-  return o / divider;
+
+  if (divider != 0)
+  {
+    output.pixel(x, y) = o / divider;
+    return true;
+  }
+  return false;
 }
 
-RGB sharpen(const bitmap<RGB> &input, const bitmap<RGB> &mask, size_t x, size_t y)
+bool sharpen(const bitmap<RGB> &input, const bitmap<RGB> &mask, bitmap<RGB> &output, size_t x, size_t y)
 {
   RGBD o(0, 0, 0);
-  double multiplier = 0;
+  double divider = 0;
 
   if (!is_mask(mask, x - 1, y))
   {
-    o = o - input.pixel(x - 1, y);
-    multiplier++;
+    o = o + input.pixel(x - 1, y);
+    divider++;
   }
   if (!is_mask(mask, x + 1, y))
   {
-    o = o - input.pixel(x + 1, y);
-    multiplier++;
+    o = o + input.pixel(x + 1, y);
+    divider++;
   }
   if (!is_mask(mask, x, y - 1))
   {
-    o = o - input.pixel(x, y - 1);
-    multiplier++;
+    o = o + input.pixel(x, y - 1);
+    divider++;
   }
   if (!is_mask(mask, x, y + 1))
   {
-    o = o - input.pixel(x, y + 1);
-    multiplier++;
+    o = o + input.pixel(x, y + 1);
+    divider++;
   }
 
-  if (is_mask(mask, x, y))
+  if (divider != 0)
   {
-    o = o / -multiplier;
+    output.pixel(x, y) = o / divider;
+    return true;
   }
-  else
-  {
-		o = o + (input.pixel(x, y) * multiplier);
-  }
-
-  return o;
+  return false;
 }
 
-void filter_inpaint(const bitmap<RGB> &input, const bitmap<RGB> &mask, bitmap<RGB> &output, const options &opt)
+bool filter_inpaint_pass(const bitmap<RGB> &input, const bitmap<RGB> &mask, bitmap<RGB> &new_mask, bitmap<RGB> &output,
+                         const options &opt)
 {
+  bool inpainted = false;
   for (size_t x = 1; x < mask.width() - 1; x++)
   {
     for (size_t y = 1; y < mask.height() - 1; y++)
     {
       if (is_mask(mask, x, y))
       {
+        bool ip = false;
         switch (opt.filter)
         {
         case filter_type::X:
-          output.pixel(x, y) = box_blur(input, mask, x, y);
+          ip = box_blur(input, mask, output, x, y);
           break;
         case filter_type::Y:
-          output.pixel(x, y) = sharpen(input, mask, x, y);
+          ip = sharpen(input, mask, output, x, y);
           break;
-        case filter_type::BONUS:
-          break;
+        }
+
+        if (ip)
+        {
+          new_mask.pixel(x, y) = RGB(0, 0, 0);
+          inpainted = true;
         }
       }
     }
+  }
+  return inpainted;
+}
+
+void filter_inpaint(bitmap<RGB> &input, const bitmap<RGB> &mask, bitmap<RGB> &output, const options &opt)
+{
+  bitmap<RGB> m1(mask);
+  bitmap<RGB> m2(mask);
+  if (opt.magic)
+  {
+    while (filter_inpaint_pass(input, m1, m2, output, opt))
+    {
+      input = output;
+      m1 = m2;
+    }
+  }
+  else
+  {
+    filter_inpaint_pass(input, m1, m2, output, opt);
   }
 }
 

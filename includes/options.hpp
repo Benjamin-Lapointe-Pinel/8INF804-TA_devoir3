@@ -30,7 +30,7 @@ class options
    : verbose(false),
      help(false),
      version(false),
-     filter(filter_type::none),
+     filter(filter_type::X),
      magic(false)
   {}
 

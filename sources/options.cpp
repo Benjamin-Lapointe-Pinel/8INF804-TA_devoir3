@@ -39,7 +39,7 @@ namespace {
     ;
 
    inpainting.add_options()
-    ("filter,f",boost::program_options::value<std::string>(),"followed by X, Y, or BONUS")
+    ("filter,f",boost::program_options::value<std::string>(),"followed by X, or Y")
     ("auto,a","Performs automagic (bonus)")
     ;
 
@@ -146,16 +146,15 @@ options::options(int argc, const char * const argv[])
    {
     switch (hash(vm["filter"].as<std::string>() ))
      {
-     case hash("X"):   filter=filter_type::X; break; // CHANGE MEEE
-     case hash("Y"):   filter=filter_type::Y; break; // CHANGE MEEEEE
-     case hash("BONUS"): filter=filter_type::BONUS; break; // CHANGE MEEEEEEEeEE
+     case hash("X"):   filter=filter_type::X; break;
+     case hash("Y"):   filter=filter_type::Y; break;
 
       default:
        throw boost::program_options::error("unknown filter "+vm["filter"].as<std::string>());
      }
    }
   else
-   filter=filter_type::X; // CHANGE MEEE
+   filter=filter_type::X;
 
   magic=vm.count("auto");
   
